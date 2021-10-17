@@ -1,8 +1,8 @@
 use std::cell::RefCell;
 use std::fmt::Display;
 use std::rc::{Rc, Weak};
+use std::slice::Chunks;
 
-#[derive(Debug)]
 pub struct GridCell {
     row: usize,
     column: usize,
@@ -37,7 +37,6 @@ impl GridCell {
     }
 }
 
-#[derive(Debug)]
 pub struct Grid {
     width: usize,
     #[allow(unused)]
@@ -81,6 +80,10 @@ impl Grid {
             cells,
         }
     }
+
+    pub fn rows(&self) -> Chunks<Rc<RefCell<GridCell>>> {
+        self.cells.chunks(self.width)
+    }
 }
 
 impl Display for Grid {
@@ -101,8 +104,6 @@ impl Display for Grid {
             bottom.push('+');
 
             for col in 0..self.width {
-                // let row = self.height - row - 1;
-
                 let cell = self.cells[row * self.width + col].borrow();
 
                 top.push_str("   ");
@@ -112,7 +113,6 @@ impl Display for Grid {
                     top.push('|');
                 }
 
-                // if linked south
                 if cell.south.is_some() && cell.linked(cell.south.as_ref().unwrap()) {
                     bottom.push_str("   ");
                 } else {
