@@ -1,34 +1,28 @@
-use crate::grid::{Grid, GridCell};
+use crate::grid::{Dir, Grid};
 use rand::Rng;
-use std::{
-    cell::RefCell,
-    rc::{Rc, Weak},
-};
 
+#[allow(unused)]
 pub fn binary_tree(grid: &mut Grid) {
     let mut rng = rand::thread_rng();
 
     for gridcell in &grid.cells {
         let mut neighbors = Vec::with_capacity(2);
 
-        let mut cell = gridcell.borrow_mut();
+        let loc = gridcell.borrow().loc;
 
-        if let Some(ref c) = cell.north {
-            neighbors.push(c);
+        if let Some(n) = grid.neighbor_loc(loc, Dir::North) {
+            neighbors.push(Dir::North);
         }
 
-        if let Some(ref c) = cell.east {
-            neighbors.push(c);
+        if let Some(n) = grid.neighbor_loc(loc, Dir::East) {
+            neighbors.push(Dir::East);
         }
 
         let len = neighbors.len();
 
         if len > 0 {
             let i = rng.gen_range(0..len);
-            let other = Weak::upgrade(&neighbors[i]).unwrap();
-
-            cell.link(&other);
-            other.borrow_mut().link(gridcell);
+            grid.link(loc, neighbors[i]);
         }
     }
 }
@@ -51,20 +45,12 @@ pub fn sidewinder(grid: &mut Grid) {
 
             if should_close_out {
                 let i: usize = rng.gen_range(0..run.len());
-                let mut cell = run[i].borrow_mut();
-                if let Some(ref north) = cell.north {
-                    let north = Weak::upgrade(north).unwrap();
-                    cell.link(&north);
-                    north.borrow_mut().link(run[i]);
-                }
+                let loc = run[i].borrow().loc;
+                grid.link(loc, Dir::North);
                 run.clear();
             } else {
-                let mut cell = gridcell.borrow_mut();
-                if let Some(ref east) = cell.east {
-                    let east = Weak::upgrade(east).unwrap();
-                    cell.link(&east);
-                    east.borrow_mut().link(gridcell);
-                }
+                let loc = gridcell.borrow().loc;
+                grid.link(loc, Dir::East);
             }
         }
     }

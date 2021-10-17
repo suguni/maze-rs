@@ -3,9 +3,23 @@ use std::fmt::Display;
 use std::rc::{Rc, Weak};
 use std::slice::Chunks;
 
+type Loc = (usize, usize);
+
+#[allow(unused)]
+#[derive(Debug, Clone, Copy)]
+pub enum Dir {
+    North,
+    East,
+    South,
+    West,
+}
+
 pub struct GridCell {
+    #[allow(unused)]
     row: usize,
+    #[allow(unused)]
     column: usize,
+    pub loc: Loc,
     pub north: Option<Weak<RefCell<GridCell>>>,
     pub south: Option<Weak<RefCell<GridCell>>>,
     pub east: Option<Weak<RefCell<GridCell>>>,
@@ -18,6 +32,7 @@ impl GridCell {
         GridCell {
             row,
             column,
+            loc: (row, column),
             north: None,
             south: None,
             east: None,
@@ -35,6 +50,15 @@ impl GridCell {
             .iter()
             .any(|c| std::ptr::eq(c.as_ptr(), cell.as_ptr()))
     }
+
+    pub fn neighbor(&self, dir: Dir) -> &Option<Weak<RefCell<GridCell>>> {
+        match dir {
+            Dir::North => &self.north,
+            Dir::East => &self.east,
+            Dir::South => &self.south,
+            Dir::West => &self.west,
+        }
+    }
 }
 
 pub struct Grid {
@@ -46,30 +70,30 @@ pub struct Grid {
 
 impl Grid {
     pub fn new(width: usize, height: usize) -> Self {
-        let cells: Vec<Rc<RefCell<GridCell>>> = (0..width)
-            .flat_map(|c| (0..height).map(move |r| (r, c)))
+        let cells: Vec<Rc<RefCell<GridCell>>> = (0..height)
+            .flat_map(|r| (0..width).map(move |c| (r, c)))
             .map(|(row, column)| Rc::new(RefCell::new(GridCell::new(row, column))))
             .collect();
 
         for (i, cell) in cells.iter().enumerate() {
             let mut cell = cell.borrow_mut();
-            let r = i as isize / width as isize;
-            let c = i as isize % width as isize;
+            let r = i / width;
+            let c = i % width;
 
-            if r - 1 >= 0 {
-                let idx = ((r - 1) * width as isize + c) as usize;
+            if r > 0 {
+                let idx = (r - 1) * width + c;
                 cell.north = Some(Rc::downgrade(&cells[idx]));
             }
-            if r + 1 < height as isize {
-                let idx = ((r + 1) * width as isize + c) as usize;
+            if r + 1 < height {
+                let idx = (r + 1) * width + c;
                 cell.south = Some(Rc::downgrade(&cells[idx]));
             }
-            if c - 1 >= 0 {
-                let idx = (r * width as isize + (c - 1)) as usize;
+            if c > 0 {
+                let idx = r * width + (c - 1);
                 cell.west = Some(Rc::downgrade(&cells[idx]));
             }
-            if c + 1 < width as isize {
-                let idx = (r * width as isize + (c + 1)) as usize;
+            if c + 1 < width {
+                let idx = r * width + (c + 1);
                 cell.east = Some(Rc::downgrade(&cells[idx]));
             }
         }
@@ -81,8 +105,50 @@ impl Grid {
         }
     }
 
+    pub fn neighbor_loc(&self, (r, c): Loc, dir: Dir) -> Option<Loc> {
+        match dir {
+            Dir::North => {
+                if r > 0 {
+                    Some((r - 1, c))
+                } else {
+                    None
+                }
+            }
+            Dir::East => {
+                if c + 1 < self.width {
+                    Some((r, c + 1))
+                } else {
+                    None
+                }
+            }
+            Dir::South => {
+                if r + 1 < self.height {
+                    Some((r + 1, c))
+                } else {
+                    None
+                }
+            }
+            Dir::West => {
+                if c > 0 {
+                    Some((r, c - 1))
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
     pub fn rows(&self) -> Chunks<Rc<RefCell<GridCell>>> {
         self.cells.chunks(self.width)
+    }
+
+    pub fn link(&self, loc1: Loc, dir: Dir) {
+        if let Some(loc2) = self.neighbor_loc(loc1, dir) {
+            let c1 = &self.cells[loc1.0 * self.width + loc1.1];
+            let c2 = &self.cells[loc2.0 * self.width + loc2.1];
+            c1.borrow_mut().link(&c2);
+            c2.borrow_mut().link(&c1);
+        }
     }
 }
 
