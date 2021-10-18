@@ -62,9 +62,8 @@ impl GridCell {
 }
 
 pub struct Grid {
-    width: usize,
-    #[allow(unused)]
-    height: usize,
+    pub width: usize,
+    pub height: usize,
     pub cells: Vec<Rc<RefCell<GridCell>>>,
 }
 
