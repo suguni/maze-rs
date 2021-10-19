@@ -3,7 +3,7 @@ use std::fmt::Display;
 use std::rc::{Rc, Weak};
 use std::slice::Chunks;
 
-type Loc = (usize, usize);
+pub type Loc = (usize, usize);
 
 #[allow(unused)]
 #[derive(Debug, Clone, Copy)]
@@ -24,7 +24,7 @@ pub struct GridCell {
     pub south: Option<Weak<RefCell<GridCell>>>,
     pub east: Option<Weak<RefCell<GridCell>>>,
     pub west: Option<Weak<RefCell<GridCell>>>,
-    links: Vec<Weak<RefCell<GridCell>>>,
+    pub links: Vec<Weak<RefCell<GridCell>>>,
 }
 
 impl GridCell {
@@ -51,6 +51,10 @@ impl GridCell {
             .any(|c| std::ptr::eq(c.as_ptr(), cell.as_ptr()))
     }
 
+    pub fn links(&self) -> std::slice::Iter<'_, Weak<RefCell<GridCell>>> {
+        self.links.iter()
+    }
+
     pub fn neighbor(&self, dir: Dir) -> &Option<Weak<RefCell<GridCell>>> {
         match dir {
             Dir::North => &self.north,
@@ -59,6 +63,20 @@ impl GridCell {
             Dir::West => &self.west,
         }
     }
+}
+
+#[test]
+fn test_links() {
+    let g1 = Rc::new(RefCell::new(GridCell::new(0, 0)));
+    let g2 = Rc::new(RefCell::new(GridCell::new(0, 1)));
+
+    g1.borrow_mut().link(&g2);
+
+    let g11 = g1.borrow();
+    assert_eq!(g11.links().count(), 1);
+
+    let g22 = g11.links().next().unwrap();
+    assert!(std::ptr::eq(g22.as_ptr(), Rc::downgrade(&g2).as_ptr()));
 }
 
 pub struct Grid {
@@ -102,6 +120,10 @@ impl Grid {
             height,
             cells,
         }
+    }
+
+    pub fn cell(&self, (row, col): Loc) -> &RefCell<GridCell> {
+        &self.cells[row * self.width + col]
     }
 
     pub fn neighbor_loc(&self, (r, c): Loc, dir: Dir) -> Option<Loc> {
@@ -198,66 +220,4 @@ impl Display for Grid {
 
         write!(f, "{}", output)
     }
-}
-
-/*
-impl<'a> IntoIterator for &'a Grid {
-    type Item = &'a GridCell;
-    type IntoIter = std::slice::Iter<'a, GridCell>;
-    fn into_iter(self) -> Self::IntoIter {
-        self.cells.iter()
-    }
-}
-
-impl<'a> IntoIterator for &'a mut Grid {
-    type Item = &'a mut GridCell;
-    type IntoIter = std::slice::IterMut<'a, GridCell>;
-    fn into_iter(self) -> Self::IntoIter {
-        self.cells.iter_mut()
-    }
-}
-*/
-
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-
-    // #[test]
-    // fn test_iter() {
-    //     let grid = Grid::new(2, 2);
-    //     assert_eq!(grid.into_iter().count(), 4);
-
-    //     let mut count = 0;
-    //     for _cell in &grid {
-    //         count += 1;
-    //     }
-    //     assert_eq!(count, 4);
-
-    //     assert_eq!(grid.cells.len(), 4);
-    // }
-
-    // #[test]
-    // fn test_print() {
-    //     let grid = Grid::new(3, 2);
-    //     for cell in &grid {
-    //         println!("{:?}", cell);
-    //     }
-    // }
-
-    // #[test]
-    // fn test_mut_iter() {
-    //     let mut grid = Grid::new(2, 2);
-    //     let mut c = 0;
-    //     for cell in &mut grid {
-    //         cell.id = c;
-    //         c += 1;
-    //     }
-
-    //     c = 0;
-    //     for cell in &grid {
-    //         assert_eq!(cell.id, c);
-    //         c += 1;
-    //     }
-    // }
 }

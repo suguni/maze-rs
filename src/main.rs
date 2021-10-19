@@ -1,4 +1,5 @@
 mod builder;
+mod distance;
 mod export_svg;
 mod grid;
 
@@ -9,9 +10,11 @@ fn main() {
     // builder::binary_tree(&mut grid);
     builder::sidewinder(&mut grid);
 
-    println!("{}", grid);
+    let distance = distance::Distance::new(grid, (19, 0));
 
-    let doc = export_svg::to_svg(grid, 10);
+    println!("{}", distance);
 
-    svg::save("image.svg", &doc).unwrap();
+    // let doc = export_svg::to_svg(grid, 10);
+
+    // svg::save("image.svg", &doc).unwrap();
 }

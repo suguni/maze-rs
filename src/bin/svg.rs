@@ -1,3 +1,4 @@
+#![allow(unused)]
 use svg::node::element::path::{Command, Data};
 use svg::node::element::tag::Path;
 use svg::node::element::{Circle, Path, Polyline, Rectangle, SVG};
